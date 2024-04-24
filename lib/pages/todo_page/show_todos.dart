@@ -9,45 +9,70 @@ class ShowTodos extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final todos = context.watch<FilteredTodosCubit>().state.filteredTodos;
-    return ListView.separated(
-        primary: false,
-        shrinkWrap: true,
-        itemCount: todos.length,
-        separatorBuilder: (context, index) {
-          return const Divider(color: Colors.grey);
-        },
-        itemBuilder: (context, index) {
-          return Dismissible(
-            key: ValueKey(todos[index].id),
-            background: showBackground(0),
-            secondaryBackground: showBackground(1),
-            onDismissed: (_) {
-              context.read<TodoListCubit>().removeTodo(todos[index]);
-            },
-            confirmDismiss: (_) {
-              return showDialog(
-                  context: context,
-                  barrierDismissible: false,
-                  builder: (context) {
-                    return AlertDialog(
-                      title: Text('Are you sure?'),
-                      content: Text('Do you want to delete?'),
-                      actions: [
-                        TextButton(
-                            onPressed: () => Navigator.pop(context, false),
-                            child: Text("No")),
-                        TextButton(
-                            onPressed: () => Navigator.pop(context, true),
-                            child: Text("Yes")),
-                      ],
-                    );
-                  });
-            },
-            child: TodoItem(
-              todo: todos[index],
-            ),
+    return MultiBlocListener(
+      listeners: [
+        BlocListener<TodoListCubit, TodoListState>(listener: (context, state) {
+          context.read<FilteredTodosCubit>().setFilteredTodos(
+                filter: context.read<FilterCubit>().state.filter,
+                todos: state.todos,
+                searchItem: context.read<SearchCubit>().state.searchItem,
+              );
+        }),
+        BlocListener<FilterCubit, FilterState>(listener: (context, state) {
+          context.read<FilteredTodosCubit>().setFilteredTodos(
+            filter: state.filter,
+            todos: context.read<TodoListCubit>().state.todos,
+            searchItem: context.read<SearchCubit>().state.searchItem,
           );
-        });
+        }),
+        BlocListener<SearchCubit, SearchState>(listener: (context, state) {
+          context.read<FilteredTodosCubit>().setFilteredTodos(
+            filter: context.read<FilterCubit>().state.filter,
+            todos: context.read<TodoListCubit>().state.todos,
+            searchItem: state.searchItem,
+          );
+        }),
+      ],
+      child: ListView.separated(
+          primary: false,
+          shrinkWrap: true,
+          itemCount: todos.length,
+          separatorBuilder: (context, index) {
+            return const Divider(color: Colors.grey);
+          },
+          itemBuilder: (context, index) {
+            return Dismissible(
+              key: ValueKey(todos[index].id),
+              background: showBackground(0),
+              secondaryBackground: showBackground(1),
+              onDismissed: (_) {
+                context.read<TodoListCubit>().removeTodo(todos[index]);
+              },
+              confirmDismiss: (_) {
+                return showDialog(
+                    context: context,
+                    barrierDismissible: false,
+                    builder: (context) {
+                      return AlertDialog(
+                        title: Text('Are you sure?'),
+                        content: Text('Do you want to delete?'),
+                        actions: [
+                          TextButton(
+                              onPressed: () => Navigator.pop(context, false),
+                              child: Text("No")),
+                          TextButton(
+                              onPressed: () => Navigator.pop(context, true),
+                              child: Text("Yes")),
+                        ],
+                      );
+                    });
+              },
+              child: TodoItem(
+                todo: todos[index],
+              ),
+            );
+          }),
+    );
   }
 
   Widget showBackground(int direction) {
